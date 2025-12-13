@@ -636,7 +636,7 @@ class QuickAssetApp:
                 else:
                     messagebox.showerror("Error", "Failed to export.", parent=hist_window)
 
-        ttk.Button(btn_frame, text="Export to Excel", command=export_selected_mapped).pack(side=tk.RIGHT)
+        ttk.Button(btn_frame, text="Export to XLSX", command=export_selected_mapped).pack(side=tk.RIGHT)
         ttk.Button(btn_frame, text="Export to CSV", command=export_selected_csv_mapped).pack(side=tk.RIGHT, padx=5)
         ttk.Button(btn_frame, text="Delete", command=delete_selected_mapped).pack(side=tk.RIGHT, padx=5)
         ttk.Button(btn_frame, text="Refresh", command=load_history_mapped).pack(side=tk.LEFT)

@@ -19,7 +19,7 @@ QuickAsset is a desktop application for scanning networks and collecting asset i
 - **Immediate Scan**: Scan a network immediately.
 - **Continuous Scan**: Scan a network repeatedly every 5 minutes.
 - **Data Collection**: Collects IP, Hostname, MAC Address, Host Type, and OS (if available).
-- **Export**: Export results to Excel.
+- **Export**: Export results to XLSX and CSV.
 - **Storage**: Saves results to JSON files.
 
 ## Requirements
@@ -46,7 +46,7 @@ QuickAsset is a desktop application for scanning networks and collecting asset i
 2. Enter the network CIDR (e.g., `192.168.1.0/24`).
 3. Click "Scan" for a one-time scan or "Start Scan" for continuous scanning.
 4. View results in the log area.
-5. Click "Export to Excel" to save the results.
+5. Click "Export to XLSX" or "Export to CSV" to save the results.
 
 ## Notes
 
