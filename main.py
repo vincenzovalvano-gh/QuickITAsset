@@ -685,4 +685,12 @@ class QuickAssetApp:
 if __name__ == "__main__":
     root = tk.Tk()
     app = QuickAssetApp(root)
+    
+    # Close splash screen if it exists
+    try:
+        import pyi_splash
+        pyi_splash.close()
+    except ImportError:
+        pass
+
     root.mainloop()

@@ -8,13 +8,7 @@ if %errorlevel% neq 0 (
 )
 
 echo Building executable...
-if exist app.ico (
-    echo Found app.ico, using it as icon.
-    pyinstaller --onefile --noconsole --name QuickAsset --icon=app.ico --add-data "app.ico;." main.py
-) else (
-    echo app.ico not found, building with default icon.
-    pyinstaller --onefile --noconsole --name QuickAsset main.py
-)
+pyinstaller --clean QuickAsset.spec
 if %errorlevel% neq 0 (
     echo Failed to build executable.
     pause
