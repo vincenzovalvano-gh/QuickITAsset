@@ -14,6 +14,7 @@ QuickAsset is a desktop application for scanning networks and collecting asset i
 
 - Python 3.x
 - Dependencies listed in `requirements.txt`
+- **Npcap**: Required for Nmap scanning. The installer can be found in the `dist` directory.
 
 ## Installation
 
