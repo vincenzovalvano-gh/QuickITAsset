@@ -7,7 +7,7 @@
 
 QuickAsset is a desktop application for scanning networks and collecting asset information.
 
-## Screenshots
+## Screenshot
 
 ![QuickAsset Demo](screenshots/sshot.gif)
 
