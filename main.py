@@ -450,6 +450,8 @@ Quick Guide:
     def stop_scan(self):
         if self.scanning:
             self.log("Stopping scan...")
+            self.status_var.set("Stopping scan...")
+            self.btn_stop.config(state=tk.DISABLED)
             self.stop_event.set()
             # The thread will clean up when it finishes the current loop or waits
 

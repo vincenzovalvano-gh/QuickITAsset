@@ -9,7 +9,7 @@ import os
 import sys
 # import nmap
 # from scapy.all import conf, arping
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from fingerprint_manager import FingerprintManager
 from utils import get_app_path
 
@@ -158,17 +158,29 @@ class NetworkScanner:
             # 2. Detailed Scan
             # Use ThreadPool for Nmap scans to speed up
             max_threads = 10
-            with ThreadPoolExecutor(max_workers=max_threads) as executor:
+            executor = ThreadPoolExecutor(max_workers=max_threads)
+            try:
                 futures = []
                 for host in live_hosts:
                     if stop_event.is_set():
                         break
                     futures.append(executor.submit(self._scan_host_details, host['ip'], host['mac'], result_callback, stop_event, use_nmap))
                 
-                for future in futures:
+                pending = set(futures)
+                while pending:
                     if stop_event.is_set():
                         break
-                    future.result()
+                    done, not_done = wait(pending, timeout=0.5, return_when=FIRST_COMPLETED)
+                    for future in done:
+                        try:
+                            future.result()
+                        except Exception:
+                            pass
+                    pending = not_done
+            finally:
+                # If stopped, do not wait for pending tasks
+                should_wait = not stop_event.is_set()
+                executor.shutdown(wait=should_wait)
                     
         except Exception as e:
             print(f"Scan error: {e}")
