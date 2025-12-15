@@ -1,6 +1,8 @@
-pandas
+﻿pandas
 openpyxl
 scapy
 pyinstaller
 python-nmap
 pywin32
+pystray
+Pillow

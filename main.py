@@ -6,6 +6,8 @@ import datetime
 import json
 import os
 import ipaddress
+import pystray
+from PIL import Image
 # from scanner import NetworkScanner
 # from storage import StorageManager
 # from fingerprint_manager import FingerprintManager
@@ -14,10 +16,13 @@ from utils import get_config_path, resource_path, get_app_path
 class QuickITAssetApp:
     def __init__(self, root):
         self.root = root
-        self.version = "1.1"
+        self.version = "1.2"
         self.root.title(f"QuickITAsset v{self.version} - ©Vincenzo Valvano")
         self._center_window(self.root, 850, 600)
         
+        # Handle window close
+        self.root.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
+
         # Set window icon
         try:
             self.root.iconbitmap(resource_path("app.ico"))
@@ -49,6 +54,91 @@ class QuickITAssetApp:
         self._create_menu()
         self._create_widgets()
 
+    def minimize_to_tray(self):
+        self.root.withdraw()
+        self.run_tray_icon()
+
+    def run_tray_icon(self):
+        try:
+            image = Image.open(resource_path("app.ico"))
+            menu = pystray.Menu(
+                pystray.MenuItem("Restore", self.restore_window),
+                pystray.MenuItem("Exit", self.quit_from_tray)
+            )
+            self.tray_icon = pystray.Icon("QuickITAsset", image, "QuickITAsset", menu)
+            threading.Thread(target=self.tray_icon.run, daemon=True).start()
+        except Exception as e:
+            print(f"Failed to create tray icon: {e}")
+            self.root.deiconify()
+
+    def restore_window(self, icon=None, item=None):
+        if hasattr(self, 'tray_icon') and self.tray_icon:
+            self.tray_icon.stop()
+        self.root.after(0, self.root.deiconify)
+
+    def quit_from_tray(self, icon=None, item=None):
+        self.root.after(0, self._handle_tray_exit)
+
+    def _handle_tray_exit(self):
+        if self.scanning:
+            if not messagebox.askyesno("Scan in Progress", "A scan is currently running. Are you sure you want to stop it and exit?"):
+                return
+
+        if hasattr(self, 'tray_icon') and self.tray_icon:
+            self.tray_icon.stop()
+        
+        self._perform_shutdown()
+
+    def quit_app(self):
+        if self.scanning:
+            if not messagebox.askyesno("Scan in Progress", "A scan is currently running. Are you sure you want to stop it and exit?"):
+                return
+
+        self._perform_shutdown()
+
+    def _perform_shutdown(self):
+        self.stop_scan()
+        
+        # Show exit splash
+        try:
+            splash_path = resource_path("splash_exit.png")
+            if os.path.exists(splash_path):
+                # Create a new Toplevel window for splash
+                splash = tk.Toplevel(self.root)
+                splash.overrideredirect(True)
+                
+                # Load image
+                img = tk.PhotoImage(file=splash_path)
+                width = img.width()
+                height = img.height()
+                
+                # Center splash
+                screen_width = splash.winfo_screenwidth()
+                screen_height = splash.winfo_screenheight()
+                x = (screen_width - width) // 2
+                y = (screen_height - height) // 2
+                splash.geometry(f"{width}x{height}+{x}+{y}")
+                
+                label = tk.Label(splash, image=img)
+                label.image = img # Keep reference
+                label.pack()
+                
+                splash.update()
+                
+                def perform_exit():
+                    self.root.destroy()
+                    os._exit(0)
+
+                # Wait a bit
+                self.root.after(2000, perform_exit)
+            else:
+                self.root.destroy()
+                os._exit(0)
+        except Exception as e:
+            print(f"Error showing exit splash: {e}")
+            self.root.destroy()
+            os._exit(0)
+
     def _create_menu(self):
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
@@ -58,7 +148,7 @@ class QuickITAssetApp:
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Settings", command=self.open_settings_window)
         file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.root.quit)
+        file_menu.add_command(label="Exit", command=self.quit_app)
 
         # Tools Menu
         tools_menu = tk.Menu(menubar, tearoff=0)
@@ -427,7 +517,7 @@ Quick Guide:
         self.continuous_mode = True
         self._start_scan_thread()
 
-    def _start_scan_thread(self):
+    def _start_scan_thread(self, history_file=None):
         self.scanning = True
         self.stop_event.clear()
         self.btn_scan.config(state=tk.DISABLED)
@@ -440,7 +530,7 @@ Quick Guide:
         self.network_entry.config(state=tk.DISABLED)
         
         # Initialize continuous scan variables
-        self.continuous_history_file = None
+        self.continuous_history_file = history_file
         self.run_count = 0
 
         self.scan_thread = threading.Thread(target=self._scan_process)
@@ -662,6 +752,55 @@ Quick Guide:
         tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
+        # Tooltip logic
+        self.last_tooltip_item = None
+        self.tooltip_window = None
+
+        def show_tooltip(item, x, y):
+            if self.tooltip_window:
+                self.tooltip_window.destroy()
+                self.tooltip_window = None
+            
+            if item:
+                vals = tree.item(item, "values")
+                if vals:
+                    mac = vals[2]
+                    hosts = self.fingerprint_manager.get_known_hosts()
+                    host_data = hosts.get(mac.upper())
+                    if host_data:
+                        ports = host_data.get("ports", [])
+                        if ports:
+                            self.tooltip_window = tk.Toplevel(fp_window)
+                            self.tooltip_window.wm_overrideredirect(True)
+                            self.tooltip_window.geometry(f"+{x+15}+{y+10}")
+                            
+                            label = tk.Label(self.tooltip_window, text=f"Open Ports: {', '.join(map(str, ports))}", background="#ffffe0", relief="solid", borderwidth=1, padx=3, pady=1)
+                            label.pack()
+
+        def on_motion(event):
+            item = tree.identify_row(event.y)
+            
+            # Only show if the hovered item is also selected
+            if item and item not in tree.selection():
+                item = None
+
+            if item != self.last_tooltip_item:
+                self.last_tooltip_item = item
+                if item:
+                    show_tooltip(item, event.x_root, event.y_root)
+                elif self.tooltip_window:
+                    self.tooltip_window.destroy()
+                    self.tooltip_window = None
+                                
+        def on_leave(event):
+             if self.tooltip_window:
+                self.tooltip_window.destroy()
+                self.tooltip_window = None
+             self.last_tooltip_item = None
+
+        tree.bind("<Motion>", on_motion)
+        tree.bind("<Leave>", on_leave)
+
         # Frame for Editing
         edit_frame = ttk.LabelFrame(fp_window, text="Edit Fingerprint", padding="10")
         edit_frame.pack(fill=tk.X, padx=10, pady=10)
@@ -748,7 +887,8 @@ Quick Guide:
         def on_select(event):
             selected_item = tree.selection()
             if selected_item:
-                item = tree.item(selected_item)
+                item_id = selected_item[0]
+                item = tree.item(item_id)
                 vals = item['values']
                 if vals:
                     mac_entry.delete(0, tk.END)
@@ -758,8 +898,133 @@ Quick Guide:
                     os_entry.insert(0, vals[4])
                     vendor_entry.delete(0, tk.END)
                     vendor_entry.insert(0, vals[5])
+                
+                # Show tooltip immediately on selection
+                # We need screen coordinates, but event doesn't always give them for virtual events
+                # We can approximate or use the mouse position
+                x, y = fp_window.winfo_pointerxy()
+                show_tooltip(item_id, x, y)
+                self.last_tooltip_item = item_id
 
         tree.bind("<<TreeviewSelect>>", on_select)
+
+        # Keep track of active combo to destroy it on scroll/click elsewhere
+        self.active_combo = None
+
+        def on_double_click(event):
+            # Destroy existing combo if any
+            if self.active_combo:
+                self.active_combo.destroy()
+                self.active_combo = None
+
+            region = tree.identify("region", event.x, event.y)
+            if region == "cell":
+                column = tree.identify_column(event.x)
+                item_id = tree.identify_row(event.y)
+                
+                # Column #4 corresponds to "type" (columns are #1, #2, #3, #4...)
+                # tree columns are defined as ("ip", "hostname", "mac", "type", "os", "vendor")
+                # So "type" is the 4th column in the list, which corresponds to #4 in identify_column
+                if column == "#4":
+                    # Get cell coordinates
+                    x, y, width, height = tree.bbox(item_id, column)
+                    
+                    # Get current value
+                    current_val = tree.item(item_id, "values")[3]
+                    
+                    # Create Combobox
+                    combo = ttk.Combobox(tree, values=[
+                        "Access Point", "Badge Reader", "Camera Server", "Computer", "Firewall", 
+                        "IP Phone", "Media Device", "Mobile Device", "Nas", "Printer", 
+                        "Router", "Server", "Soundbar", "Switch", 
+                        "UPS", "Virtual Machine"
+                    ], width=18)
+                    combo.set(current_val)
+                    
+                    # Place it
+                    combo.place(x=x, y=y, width=width, height=height)
+                    combo.focus_set()
+                    self.active_combo = combo
+                    
+                    # Open the dropdown immediately
+                    try:
+                        # Use Tcl command to force open the dropdown
+                        combo.tk.call('ttk::combobox::Post', combo._w)
+                    except Exception:
+                        pass
+
+                    def save_edit(event=None):
+                        new_val = combo.get()
+                        # Update tree
+                        vals = list(tree.item(item_id, "values"))
+                        vals[3] = new_val
+                        tree.item(item_id, values=vals)
+                        
+                        # Update DB
+                        mac = vals[2]
+                        # We need other values to update correctly without erasing them
+                        # Fortunately we have them in vals
+                        # vals: ip, hostname, mac, type, os, vendor
+                        self.fingerprint_manager.update_known_host(
+                            mac, 
+                            new_val, 
+                            vals[4], # os
+                            vendor=vals[5] # vendor
+                        )
+                        
+                        combo.destroy()
+                        self.active_combo = None
+                        
+                        # Also update the edit form if it matches
+                        if mac_entry.get() == mac:
+                            type_combo.set(new_val)
+
+                    def cancel_edit(event=None):
+                        # Only destroy if it's the same widget (focus out can trigger weirdly)
+                        if self.active_combo == combo:
+                            combo.destroy()
+                            self.active_combo = None
+
+                    combo.bind("<Return>", save_edit)
+                    combo.bind("<<ComboboxSelected>>", save_edit)
+                    combo.bind("<FocusOut>", cancel_edit)
+                    combo.bind("<Escape>", cancel_edit)
+
+        # Bind scroll events to destroy combo
+        def on_scroll(*args):
+            if self.active_combo:
+                self.active_combo.destroy()
+                self.active_combo = None
+            # Propagate scroll
+            tree.yview(*args)
+
+        scrollbar.config(command=on_scroll)
+        
+        # Also bind mousewheel on tree
+        def on_mousewheel(event):
+            if self.active_combo:
+                self.active_combo.destroy()
+                self.active_combo = None
+
+        tree.bind("<MouseWheel>", on_mousewheel)
+        tree.bind("<Button-4>", on_mousewheel) # Linux scroll up
+        tree.bind("<Button-5>", on_mousewheel) # Linux scroll down
+        
+        # Bind single click to destroy combo if clicking elsewhere
+        def on_single_click(event):
+            if self.active_combo:
+                # Check if click is inside the combo
+                x, y = event.x_root, event.y_root
+                cx, cy = self.active_combo.winfo_rootx(), self.active_combo.winfo_rooty()
+                cw, ch = self.active_combo.winfo_width(), self.active_combo.winfo_height()
+                
+                if not (cx <= x <= cx+cw and cy <= y <= cy+ch):
+                    self.active_combo.destroy()
+                    self.active_combo = None
+
+        tree.bind("<Button-1>", on_single_click, add="+")
+
+        tree.bind("<Double-1>", on_double_click)
 
         def save_entry():
             mac = mac_entry.get().strip()
@@ -800,6 +1065,30 @@ Quick Guide:
         ttk.Button(btn_frame, text="Delete", command=delete_entry).pack(side=tk.LEFT, padx=5)
 
         load_data()
+
+    def resume_scan_from_history(self, network, label, history_file):
+        # Update UI
+        self.network_entry.delete(0, tk.END)
+        self.network_entry.insert(0, network)
+        self.label_entry.delete(0, tk.END)
+        self.label_entry.insert(0, label)
+        
+        self._save_config()
+        
+        self.current_network = network
+        self.current_label = label
+        self.continuous_mode = True
+        
+        # Load history data and set it as current state
+        # This ensures that the scan process picks up the history data as the starting point
+        results = self.storage.load_history_results(history_file)
+        if results:
+            # We save it to the "current" file (results_{network}.json)
+            # We also pass history_filename so it updates the timestamp of the history file
+            self.storage.save_results(network, results, label, history_filename=history_file)
+            self.log(f"Resuming scan from history: {history_file} ({len(results)} hosts loaded)")
+        
+        self._start_scan_thread(history_file=history_file)
 
     def open_history_window(self):
         hist_window = tk.Toplevel(self.root)
@@ -973,10 +1262,32 @@ Quick Guide:
             else:
                 messagebox.showerror("Error", "Could not load scan results.", parent=hist_window)
 
+        def resume_selected_scan():
+            selected_item = tree.selection()
+            if not selected_item:
+                messagebox.showwarning("Warning", "Please select a scan to resume.", parent=hist_window)
+                return
+            
+            item_id = selected_item[0]
+            filename = item_map.get(item_id)
+            
+            if not filename:
+                return
+            
+            # Get details from tree
+            vals = tree.item(item_id)['values']
+            network = str(vals[1])
+            label = str(vals[2])
+            
+            if messagebox.askyesno("Confirm", f"Resume continuous scan for {network}?", parent=hist_window):
+                hist_window.destroy()
+                self.resume_scan_from_history(network, label, filename)
+
         ttk.Button(btn_frame, text="Export to XLSX", command=export_selected_mapped).pack(side=tk.RIGHT)
         ttk.Button(btn_frame, text="Export to CSV", command=export_selected_csv_mapped).pack(side=tk.RIGHT, padx=5)
         ttk.Button(btn_frame, text="View Scan", command=view_selected_scan).pack(side=tk.RIGHT, padx=5)
         ttk.Button(btn_frame, text="Delete", command=delete_selected_mapped).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_frame, text="Resume Scan", command=resume_selected_scan).pack(side=tk.RIGHT, padx=5)
         ttk.Button(btn_frame, text="Refresh", command=load_history_mapped).pack(side=tk.LEFT)
 
         load_history_mapped()
