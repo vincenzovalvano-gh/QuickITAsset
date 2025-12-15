@@ -8,7 +8,7 @@ if %errorlevel% neq 0 (
 )
 
 echo Building executable...
-pyinstaller --clean QuickAsset.spec
+pyinstaller --clean QuickITAsset.spec
 if %errorlevel% neq 0 (
     echo Failed to build executable.
     pause

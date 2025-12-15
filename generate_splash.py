@@ -13,7 +13,7 @@ def create_splash():
     # Draw a border
     draw.rectangle([0, 0, width-1, height-1], outline=(100, 100, 100, 255), width=2)
     
-    # Draw "QuickAsset" text
+    # Draw "QuickITAsset" text
     # Since we might not have a specific font, we'll use the default one or try to load arial
     try:
         font_large = ImageFont.truetype("arial.ttf", 40)
@@ -22,7 +22,7 @@ def create_splash():
         font_large = ImageFont.load_default()
         font_small = ImageFont.load_default()
 
-    text = "QuickAsset"
+    text = "QuickITAsset"
     
     # Calculate text position to center it
     # getbbox returns (left, top, right, bottom)

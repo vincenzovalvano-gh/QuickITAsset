@@ -74,10 +74,10 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Building executable..."
 if (Test-Path "app.ico") {
     Write-Host "Found app.ico, using it as icon."
-    & $pythonExe -m PyInstaller --onefile --noconsole --name QuickAsset --icon=app.ico --add-data "app.ico;." main.py
+    & $pythonExe -m PyInstaller --onefile --noconsole --name QuickITAsset --icon=app.ico --add-data "app.ico;." --splash splash.png main.py
 } else {
     Write-Host "app.ico not found, building with default icon."
-    & $pythonExe -m PyInstaller --onefile --noconsole --name QuickAsset main.py
+    & $pythonExe -m PyInstaller --onefile --noconsole --name QuickITAsset --splash splash.png main.py
 }
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to build executable."
@@ -85,5 +85,5 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Build complete! The executable is in the 'dist' folder."
-Write-Host "You can now run dist\QuickAsset.exe"
+Write-Host "You can now run dist\QuickITAsset.exe"
 Pause

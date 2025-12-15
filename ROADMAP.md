@@ -1,6 +1,6 @@
-# QuickAsset Roadmap
+# QuickITAsset Roadmap
 
-This document outlines the future development plans for QuickAsset.
+This document outlines the future development plans for QuickITAsset.
 
 ## Upcoming Features
 

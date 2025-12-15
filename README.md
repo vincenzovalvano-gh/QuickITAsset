@@ -1,15 +1,15 @@
-# QuickAsset
+# QuickITAsset
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.x-blue.svg)
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 
-QuickAsset is a desktop application for scanning networks and collecting asset information.
+QuickITAsset is a desktop application for scanning networks and collecting asset information.
 
 ## Screenshot
 
-![QuickAsset Demo](screenshots/sshot.gif)
+![QuickITAsset Demo](screenshots/sshot.gif)
 
 ## Features
 
@@ -44,7 +44,7 @@ QuickAsset is a desktop application for scanning networks and collecting asset i
 1. Run the application:
    ```bash
    python main.py
-   # or run the compiled executable QuickAsset.exe
+   # or run the compiled executable QuickITAsset.exe
    ```
 2. Enter the network CIDR (e.g., `192.168.1.0/24`).
 3. (Optional) Enter a label for the scan (e.g., "MyOffice").

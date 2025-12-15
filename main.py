@@ -11,11 +11,11 @@ import ipaddress
 # from fingerprint_manager import FingerprintManager
 from utils import get_config_path, resource_path, get_app_path
 
-class QuickAssetApp:
+class QuickITAssetApp:
     def __init__(self, root):
         self.root = root
         self.version = "1.1"
-        self.root.title(f"QuickAsset v{self.version} - ©Vincenzo Valvano")
+        self.root.title(f"QuickITAsset v{self.version} - ©Vincenzo Valvano")
         self._center_window(self.root, 850, 600)
         
         # Set window icon
@@ -87,7 +87,7 @@ Quick Guide:
         messagebox.showinfo("Quick Guide", guide_text.strip())
 
     def show_about(self):
-        about_text = f"QuickAsset v{self.version}\n\n© Vincenzo Valvano\n\nA simple network asset discovery tool."
+        about_text = f"QuickITAsset v{self.version}\n\n© Vincenzo Valvano\n\nA simple network asset discovery tool."
         messagebox.showinfo("About", about_text)
 
     def _center_window(self, window, width, height):
@@ -294,7 +294,7 @@ Quick Guide:
                 try:
                     hDC = win32ui.CreateDC()
                     hDC.CreatePrinterDC(selected_printer)
-                    hDC.StartDoc("QuickAsset Scan Report")
+                    hDC.StartDoc("QuickITAsset Scan Report")
                     hDC.StartPage()
                     
                     # Get DPI
@@ -329,7 +329,7 @@ Quick Guide:
                         "weight": 700,
                     })
                     hDC.SelectObject(title_font)
-                    hDC.TextOut(x, y, f"QuickAsset Scan Report - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    hDC.TextOut(x, y, f"QuickITAsset Scan Report - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                     y += int(abs(title_font_height) * 2)
                     
                     # Restore normal font
@@ -1057,7 +1057,7 @@ if __name__ == "__main__":
     root = tk.Tk()
     
     # Initialize App (heavy imports are now delayed)
-    app = QuickAssetApp(root)
+    app = QuickITAssetApp(root)
     
     # Close PyInstaller splash if exists
     try:
